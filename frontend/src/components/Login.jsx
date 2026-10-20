@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import API from '../api/axios';
-import { Button, PasswordInput, TextField  } from '@idds/react';
+import { Alert, Button, PasswordInput, TextField } from '@idds/react';
 import { IconLock, IconMail } from '@tabler/icons-react';
 
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setErrors({});
     setLoading(true);
 
     try {
@@ -30,7 +32,13 @@ export default function Login({ onLoginSuccess }) {
       // Trigger callback untuk ubah state di App.jsx
       onLoginSuccess();
     } catch (err) {
-      if (err.response && err.response.data) {
+      if (err.response?.status === 422) {
+        // Validasi backend: tampilkan pesan di bawah masing-masing isian
+        setErrors(Object.fromEntries(
+          Object.entries(err.response.data.errors || {}).map(([k, v]) => [k, v[0]])
+        ));
+        setError('Periksa kembali isian yang ditandai.');
+      } else if (err.response && err.response.data) {
         setError(err.response.data.message || 'Email atau password salah!');
       } else {
         setError('Gagal terhubung ke server backend.');
@@ -51,40 +59,39 @@ export default function Login({ onLoginSuccess }) {
         </div>
 
         {/* Alert Error */}
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-            {error}
-          </div>
-        )}
+        {error && <Alert variant="critical" title="Gagal masuk" message={error} />}
 
-        {/* Form Login */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        {/* Form Login: validasi dilakukan di backend */}
+        <form onSubmit={handleLogin} noValidate className="space-y-4">
           <div>
-            <TextField 
-              label="Alamat Email"
+            <TextField
+              label="Alamat Email *"
               type="email"
               placeholder="contoh: admin@diskominfo.go.id"
               value={email}
-              onChange={(val) => setEmail(val)}
-              required
+              onChange={(val) => { setEmail(val); setErrors((p) => ({ ...p, email: undefined })); }}
+              status={errors.email ? 'error' : 'neutral'}
+              statusMessage={errors.email}
+              disabled={loading}
             />
           </div>
 
           <div>
-            <PasswordInput 
-              label="Kata Sandi"
-              type="password"
+            <PasswordInput
+              label="Kata Sandi *"
               placeholder="••••••••"
               value={password}
-              onChange={(val) => setPassword(val)}
-              required
+              onChange={(val) => { setPassword(val); setErrors((p) => ({ ...p, password: undefined })); }}
+              status={errors.password ? 'error' : 'neutral'}
+              statusMessage={errors.password}
+              disabled={loading}
             />
           </div>
 
 
-          <Button 
-            variant="primary" 
-            type="submit" 
+          <Button
+            hierarchy="primary"
+            type="submit"
             disabled={loading}
             className="w-full flex justify-center items-center"
           >

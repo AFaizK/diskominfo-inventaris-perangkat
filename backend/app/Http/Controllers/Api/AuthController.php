@@ -10,7 +10,16 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ], [
+            'required' => ':attribute wajib diisi.',
+            'email' => ':attribute harus berupa alamat email yang valid.',
+        ], [
+            'email' => 'Alamat email',
+            'password' => 'Kata sandi',
+        ]);
 
         if (auth()->attempt($credentials)) {
             $token = auth()->user()->createToken('auth_token')->plainTextToken;
@@ -21,7 +30,7 @@ class AuthController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Unauthorized'], 401);
+        return response()->json(['message' => 'Email atau kata sandi salah.'], 401);
     }
 
     public function logout(Request $request)
